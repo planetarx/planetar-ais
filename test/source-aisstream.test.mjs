@@ -50,6 +50,14 @@ test('PositionReport: AIS not-available sentinels become null (HDG 511, ROT -128
   assert.equal(v.sog, 0.1);
 });
 
+test('real position and static snapshots carry simulated: false', () => {
+  const { src, out } = capture();
+  src._handle(positionReport({ Sog: 1, Cog: 10, TrueHeading: 10 }));
+  assert.equal(out.at(-1).vessel.simulated, false);
+  src._handle(staticData({ Type: 70 }));
+  assert.equal(out.at(-1).vessel.simulated, false);
+});
+
 test('PositionReport: valid HDG, ROT and nav status are carried through', () => {
   const { src, out } = capture();
   src._handle(positionReport({ Sog: 12.3, Cog: 240.0, TrueHeading: 243, RateOfTurn: 12, NavigationalStatus: 0 }));

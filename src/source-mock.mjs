@@ -247,6 +247,7 @@ export class MockAisSource {
       draught: v.draught,
       shipTypeCode: v.shipTypeCode,
       imo: v.imo,
+      simulated: true,                     // synthetic fleet — never render as observed
       destination: v.destination,
       lastSeenNs: v.lastSeenNs.toString(),
       firstSeenNs: v.firstSeenNs.toString(),

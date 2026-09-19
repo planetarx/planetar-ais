@@ -97,6 +97,7 @@ fields keep their original semantics for deployed clients.
 | `name`, `callsign`, `destination`, `flag` | string or `null` | `flag` is only set by the mock source |
 | `lastSeenNs`, `firstSeenNs` | decimal string, ns since epoch | receive time at this service (ms precision) |
 | `inBBox`, `serverId` | bool, string | operating-area scoping |
+| `simulated` | bool | `true` from the mock source, `false` from aisstream — render provenance honestly |
 
 Run `npm test` for the decoder and mock-source tests.
 

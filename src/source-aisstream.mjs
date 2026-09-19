@@ -115,6 +115,7 @@ export class AisStreamSource {
         rot: classB ? null : rotOrNull(pr.RateOfTurn),            // raw AIS ROT (-127..127) or null
         navStatus: classB ? null : navOrNull(pr.NavigationalStatus), // 0..14 or null
         aisClass: classB ? 'B' : 'A',
+        simulated: false,
         destination: existing?.destination ?? null,
         lastSeenNs: String(BigInt(Date.now()) * 1_000_000n),
         firstSeenNs: existing?.firstSeenNs ?? String(BigInt(Date.now()) * 1_000_000n),
@@ -134,6 +135,7 @@ export class AisStreamSource {
           mmsi, lat: 0, lon: 0, sog: 0, cog: 0, heading: 0, inBBox: false,
           trueHeading: null, rot: null, navStatus: null, aisClass: null,
         }),
+        simulated: false,
         name: (sd.Name ?? meta.ShipName ?? `MMSI ${mmsi}`).trim(),
         type: shipTypeName(sd.Type) ?? existing?.type ?? 'unknown',
         shipTypeCode: sd.Type ?? existing?.shipTypeCode ?? null,

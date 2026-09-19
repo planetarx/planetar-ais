@@ -23,3 +23,8 @@ test('mock snapshots carry trueHeading, rot, navStatus, aisClass, dims, beam, dr
     assert.equal(s.imo, null);
   }
 });
+
+test('mock snapshots are marked simulated so clients can render provenance honestly', () => {
+  const src = new MockAisSource();
+  for (const v of src.vessels.values()) assert.equal(src._snapshot(v).simulated, true);
+});
