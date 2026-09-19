@@ -11,6 +11,21 @@ import { VICTORIA_BBOX, insideBBox } from './victoria.mjs';
 
 const URL = 'wss://stream.aisstream.io/v0/stream';
 
+// AIS "not available" sentinels (ITU-R M.1371) → null, so a placement client
+// never rotates a hull by 511° or dead-reckons a -128 rate of turn.
+const hdgOrNull = (h) => (typeof h === 'number' && h >= 0 && h < 360 ? h : null);   // 511 = n/a
+const rotOrNull = (r) => (typeof r === 'number' && r !== -128 ? r : null);           // -128 = n/a; ±127 = >10°/min, no sensor
+const navOrNull = (n) => (typeof n === 'number' && n >= 0 && n <= 14 ? n : null);   // 15 = not defined
+const posOrNull = (x) => (typeof x === 'number' && x > 0 ? x : null);                // 0 = n/a (draught, IMO)
+
+// Static fields that ride along on every later position snapshot.
+const STATIC_KEYS = ['dimA', 'dimB', 'dimC', 'dimD', 'beam', 'draught', 'shipTypeCode', 'imo'];
+function carryStatic(existing) {
+  const out = {};
+  for (const k of STATIC_KEYS) out[k] = existing?.[k] ?? null;
+  return out;
+}
+
 export class AisStreamSource {
   constructor({ apiKey, bbox = VICTORIA_BBOX } = {}) {
     if (!apiKey) throw new Error('AISSTREAM_API_KEY is required for source=aisstream');
@@ -81,6 +96,8 @@ export class AisStreamSource {
       if (typeof lat !== 'number' || typeof lon !== 'number') return;
       if (!insideBBox(lat, lon, this.bbox)) return; // belt + suspenders; aisstream filtered already
 
+      const classB = type === 'StandardClassBPositionReport';
+      const trueHeading = hdgOrNull(pr.TrueHeading);
       const snap = {
         mmsi,
         name: existing?.name ?? meta.ShipName?.trim() ?? `MMSI ${mmsi}`,
@@ -88,11 +105,16 @@ export class AisStreamSource {
         flag: existing?.flag ?? null,
         length: existing?.length ?? null,
         callsign: existing?.callsign ?? null,
+        ...carryStatic(existing),
         lat,
         lon,
-        sog: pr.Sog ?? 0,
-        cog: pr.Cog ?? 0,
-        heading: pr.TrueHeading ?? pr.Cog ?? 0,
+        sog: pr.Sog ?? 0,                        // knots; 102.3 = n/a passes through (legacy)
+        cog: pr.Cog ?? 0,                        // degrees true; 360 = n/a passes through (legacy)
+        heading: trueHeading ?? pr.Cog ?? 0,     // legacy: HDG, else COG — always a number
+        trueHeading,                             // hull heading, degrees true, or null
+        rot: classB ? null : rotOrNull(pr.RateOfTurn),            // raw AIS ROT (-127..127) or null
+        navStatus: classB ? null : navOrNull(pr.NavigationalStatus), // 0..14 or null
+        aisClass: classB ? 'B' : 'A',
         destination: existing?.destination ?? null,
         lastSeenNs: String(BigInt(Date.now()) * 1_000_000n),
         firstSeenNs: existing?.firstSeenNs ?? String(BigInt(Date.now()) * 1_000_000n),
@@ -106,13 +128,23 @@ export class AisStreamSource {
     if (type === 'ShipStaticData') {
       const sd = msg.Message?.ShipStaticData;
       if (!sd) return;
+      const dim = dims(sd);
       const next = {
-        ...(existing ?? { mmsi, lat: 0, lon: 0, sog: 0, cog: 0, heading: 0, inBBox: false }),
+        ...(existing ?? {
+          mmsi, lat: 0, lon: 0, sog: 0, cog: 0, heading: 0, inBBox: false,
+          trueHeading: null, rot: null, navStatus: null, aisClass: null,
+        }),
         name: (sd.Name ?? meta.ShipName ?? `MMSI ${mmsi}`).trim(),
         type: shipTypeName(sd.Type) ?? existing?.type ?? 'unknown',
+        shipTypeCode: sd.Type ?? existing?.shipTypeCode ?? null,
         callsign: sd.CallSign?.trim() ?? existing?.callsign ?? null,
         destination: sd.Destination?.trim() ?? existing?.destination ?? null,
         length: dimsLength(sd) ?? existing?.length ?? null,
+        ...(dim ?? { dimA: existing?.dimA ?? null, dimB: existing?.dimB ?? null,
+                     dimC: existing?.dimC ?? null, dimD: existing?.dimD ?? null,
+                     beam: existing?.beam ?? null }),
+        draught: posOrNull(sd.MaximumStaticDraught) ?? existing?.draught ?? null,
+        imo: posOrNull(sd.ImoNumber) ?? existing?.imo ?? null,
         firstSeenNs: existing?.firstSeenNs ?? String(BigInt(Date.now()) * 1_000_000n),
       };
       this.vesselState.set(mmsi, next);
@@ -120,6 +152,17 @@ export class AisStreamSource {
       else this.onUpdate({ event: 'static-update', vessel: next });
     }
   }
+}
+
+// A/B/C/D are metres from the AIS antenna to bow/stern/port/starboard. All
+// four zero means "not available" — anything else is a real reference frame
+// (A = 0 is legitimate: antenna at the bow).
+function dims(sd) {
+  const d = sd?.Dimension;
+  if (!d) return null;
+  const [A, B, C, D] = [d.A ?? 0, d.B ?? 0, d.C ?? 0, d.D ?? 0];
+  if (A + B + C + D === 0) return null;
+  return { dimA: A, dimB: B, dimC: C, dimD: D, beam: C + D > 0 ? C + D : null };
 }
 
 function dimsLength(sd) {

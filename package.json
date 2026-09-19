@@ -3,11 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "AIS ingest microservice \u2014 Victoria, BC. Publishes vessel events to planetar-broker.",
+  "description": "AIS ingest microservice — Victoria, BC. Publishes vessel events to planetar-broker.",
   "scripts": {
     "start": "node src/index.mjs",
     "start:mock": "AIS_SOURCE=mock node src/index.mjs",
-    "start:aisstream": "AIS_SOURCE=aisstream node src/index.mjs"
+    "start:aisstream": "AIS_SOURCE=aisstream node src/index.mjs",
+    "test": "node --test 'test/*.test.mjs'"
   },
   "dependencies": {
     "uuid": "^14.0.0",

@@ -39,6 +39,27 @@ const SPEED_RANGE = {
   default:   [ 5, 12],
 };
 
+// ITU-R M.1371 ship type codes for the mock fleet's coarse labels, so the
+// synthetic feed carries the same `shipTypeCode` the real decoder does.
+const SHIP_TYPE_CODE = {
+  cargo: 70, bulk: 70, container: 71, tanker: 80, ferry: 60, fishing: 30,
+  pleasure: 37, sailing: 36, pilot: 50, tug: 52, patrol: 55, military: 35,
+};
+
+// Plausible AIS static geometry from a seed's overall length: antenna ~70%
+// aft of the bow, beam ~1/6.5 of length, draught ~4.5% of length.
+function staticGeometry(length, type) {
+  const dimA = Math.round(length * 0.7);
+  const beam = Math.max(2, Math.round(length / 6.5));
+  const dimC = Math.floor(beam / 2);
+  return {
+    dimA, dimB: length - dimA, dimC, dimD: beam - dimC, beam,
+    draught: Math.max(0.8, Number((length * 0.045).toFixed(1))),
+    shipTypeCode: SHIP_TYPE_CODE[type] ?? 90,
+    imo: null,
+  };
+}
+
 function pickInitialSpeed(type) {
   const [lo, hi] = SPEED_RANGE[type] ?? SPEED_RANGE.default;
   return lo + Math.random() * (hi - lo);
@@ -106,6 +127,7 @@ export class MockAisSource {
       cog: Math.random() * 360,               // degrees true
       heading: Math.random() * 360,
       destination: seed.destination ?? destinationsFor(seed.type)[0],
+      ...staticGeometry(seed.length, seed.type),
       lastSeenNs: BigInt(Date.now()) * 1_000_000n,
       firstSeenNs: BigInt(Date.now()) * 1_000_000n,
       dark: false,                            // when true, skip emit for N ticks (AIS gap)
@@ -217,6 +239,14 @@ export class MockAisSource {
       sog: Number(v.sog.toFixed(2)),
       cog: Number(v.cog.toFixed(1)),
       heading: Number(v.heading.toFixed(1)),
+      trueHeading: Number(v.heading.toFixed(1)),
+      rot: 0,
+      navStatus: v.anchored ? 1 : 0,       // 0 = under way using engine, 1 = at anchor
+      aisClass: 'A',
+      dimA: v.dimA, dimB: v.dimB, dimC: v.dimC, dimD: v.dimD, beam: v.beam,
+      draught: v.draught,
+      shipTypeCode: v.shipTypeCode,
+      imo: v.imo,
       destination: v.destination,
       lastSeenNs: v.lastSeenNs.toString(),
       firstSeenNs: v.firstSeenNs.toString(),
