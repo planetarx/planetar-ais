@@ -17,6 +17,8 @@ const hdgOrNull = (h) => (typeof h === 'number' && h >= 0 && h < 360 ? h : null)
 const rotOrNull = (r) => (typeof r === 'number' && r !== -128 ? r : null);           // -128 = n/a; ±127 = >10°/min, no sensor
 const navOrNull = (n) => (typeof n === 'number' && n >= 0 && n <= 14 ? n : null);   // 15 = not defined
 const posOrNull = (x) => (typeof x === 'number' && x > 0 ? x : null);                // 0 = n/a (draught, IMO)
+const utcSecOrNull = (t) => (typeof t === 'number' && t >= 0 && t <= 59 ? t : null);  // 60 n/a, 61 manual, 62 DR, 63 inoperative
+const boolOrNull = (b) => (typeof b === 'boolean' ? b : null);
 
 // Static fields that ride along on every later position snapshot.
 const STATIC_KEYS = ['dimA', 'dimB', 'dimC', 'dimD', 'beam', 'draught', 'shipTypeCode', 'imo'];
@@ -115,6 +117,8 @@ export class AisStreamSource {
         rot: classB ? null : rotOrNull(pr.RateOfTurn),            // raw AIS ROT (-127..127) or null
         navStatus: classB ? null : navOrNull(pr.NavigationalStatus), // 0..14 or null
         aisClass: classB ? 'B' : 'A',
+        aisUtcSecond: utcSecOrNull(pr.Timestamp),     // the vessel's own measurement second (UTC), or null
+        posAccuracy: boolOrNull(pr.PositionAccuracy), // true = high (<10 m DGPS), false = low, null = unknown
         simulated: false,
         destination: existing?.destination ?? null,
         lastSeenNs: String(BigInt(Date.now()) * 1_000_000n),
@@ -134,6 +138,7 @@ export class AisStreamSource {
         ...(existing ?? {
           mmsi, lat: 0, lon: 0, sog: 0, cog: 0, heading: 0, inBBox: false,
           trueHeading: null, rot: null, navStatus: null, aisClass: null,
+          aisUtcSecond: null, posAccuracy: null,
         }),
         simulated: false,
         name: (sd.Name ?? meta.ShipName ?? `MMSI ${mmsi}`).trim(),

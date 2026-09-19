@@ -89,6 +89,8 @@ fields keep their original semantics for deployed clients.
 | `rot` | raw AIS ROT (−127..127) or `null` | °/min = sign(r)·(r/4.733)²; ±127 = >10 °/min, no sensor; `null` = not available |
 | `navStatus` | 0–14 or `null` | ITU-R M.1371 nav status; `null` = not defined (15) or Class B |
 | `aisClass` | `A` \| `B` \| `null` | from the message type; `null` until a position arrives |
+| `aisUtcSecond` | 0–59 or `null` | the AIS message's own UTC second of measurement; `null` for 60 (n/a), 61 (manual), 62 (dead reckoning), 63 (inoperative). Combine with `createdAtNs` to recover measurement time |
+| `posAccuracy` | bool or `null` | AIS position-accuracy bit: `true` = high (< 10 m, DGPS), `false` = low (> 10 m) |
 | `shipTypeCode` | int or `null` | ITU-R M.1371 type code; `type` is its coarse label |
 | `dimA`, `dimB`, `dimC`, `dimD` | metres or `null` | antenna → bow / stern / port / starboard; all `null` when all four are 0 |
 | `length`, `beam` | metres or `null` | `A+B`, `C+D` |

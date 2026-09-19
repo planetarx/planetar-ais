@@ -58,6 +58,31 @@ test('real position and static snapshots carry simulated: false', () => {
   assert.equal(out.at(-1).vessel.simulated, false);
 });
 
+test('PositionReport: the AIS UTC second and position-accuracy bit are carried through', () => {
+  const { src, out } = capture();
+  src._handle(positionReport({ Sog: 8, Cog: 45, TrueHeading: 44, Timestamp: 27, PositionAccuracy: true }));
+  const v = out.at(-1).vessel;
+  assert.equal(v.aisUtcSecond, 27);
+  assert.equal(v.posAccuracy, true);
+});
+
+test('PositionReport: Timestamp 60-63 (not available / manual / DR / inoperative) becomes null; missing accuracy is null', () => {
+  const { src, out } = capture();
+  for (const ts of [60, 61, 62, 63]) {
+    src._handle(positionReport({ Sog: 8, Cog: 45, Timestamp: ts }));
+    assert.equal(out.at(-1).vessel.aisUtcSecond, null, `Timestamp ${ts}`);
+  }
+  assert.equal(out.at(-1).vessel.posAccuracy, null);
+});
+
+test('StandardClassBPositionReport: UTC second and accuracy are carried the same way', () => {
+  const { src, out } = capture();
+  src._handle(classB({ Sog: 5, Cog: 90, TrueHeading: 92, Timestamp: 3, PositionAccuracy: false }));
+  const v = out.at(-1).vessel;
+  assert.equal(v.aisUtcSecond, 3);
+  assert.equal(v.posAccuracy, false);
+});
+
 test('PositionReport: valid HDG, ROT and nav status are carried through', () => {
   const { src, out } = capture();
   src._handle(positionReport({ Sog: 12.3, Cog: 240.0, TrueHeading: 243, RateOfTurn: 12, NavigationalStatus: 0 }));

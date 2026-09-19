@@ -24,6 +24,16 @@ test('mock snapshots carry trueHeading, rot, navStatus, aisClass, dims, beam, dr
   }
 });
 
+test('mock snapshots carry a UTC second consistent with lastSeenNs and a high-accuracy fix', () => {
+  const src = new MockAisSource();
+  for (const v of src.vessels.values()) {
+    const s = src._snapshot(v);
+    const expected = new Date(Number(BigInt(s.lastSeenNs) / 1_000_000n)).getUTCSeconds();
+    assert.equal(s.aisUtcSecond, expected);
+    assert.equal(s.posAccuracy, true);
+  }
+});
+
 test('mock snapshots are marked simulated so clients can render provenance honestly', () => {
   const src = new MockAisSource();
   for (const v of src.vessels.values()) assert.equal(src._snapshot(v).simulated, true);

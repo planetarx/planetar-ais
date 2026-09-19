@@ -247,6 +247,8 @@ export class MockAisSource {
       draught: v.draught,
       shipTypeCode: v.shipTypeCode,
       imo: v.imo,
+      aisUtcSecond: new Date(Number(v.lastSeenNs / 1_000_000n)).getUTCSeconds(),
+      posAccuracy: true,
       simulated: true,                     // synthetic fleet — never render as observed
       destination: v.destination,
       lastSeenNs: v.lastSeenNs.toString(),
