@@ -37,12 +37,27 @@ export class AisStreamSource {
     this.vesselState = new Map(); // mmsi -> last vessel snapshot we built
     this.onUpdate = () => {};
     this.reconnectTimer = null;
+    // Reconnect resilience (first written directly on www0, 2026-06-24, after
+    // aisstream left the feed in a silent half-open socket for ~2 days):
+    // aisstream can drop to a socket that never fires 'close', can accept a
+    // subscription and then send nothing, and returns bursts of 503s. So we
+    // watchdog on data inactivity and back off exponentially on reconnect.
+    this.watchdogTimer = null;
+    this.lastMsgAt = 0;
+    this.baseReconnectMs = 5000;
+    this.maxReconnectMs = 60000;
+    this.reconnectMs = this.baseReconnectMs;
+    this.idleTimeoutMs = 90000;
+    this.watchdogIntervalMs = 30000;
   }
 
-  start() { this._connect(); }
+  start() { this._startWatchdog(); this._connect(); }
 
   stop() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    if (this.watchdogTimer) clearInterval(this.watchdogTimer);
+    this.watchdogTimer = null;
     if (this.ws) try { this.ws.close(); } catch { /* ignore */ }
     this.ws = null;
   }
@@ -52,32 +67,76 @@ export class AisStreamSource {
     console.log('[aisstream] connecting');
     const ws = new WebSocket(URL);
     this.ws = ws;
-    ws.on('open', () => {
-      console.log('[aisstream] open; subscribing to area BBox');
-      ws.send(JSON.stringify({
-        APIKey: this.apiKey,
-        BoundingBoxes: [[this.bbox.sw, this.bbox.ne]],
-        FilterMessageTypes: ['PositionReport', 'ShipStaticData', 'StandardClassBPositionReport'],
-      }));
-    });
-    ws.on('message', (data) => {
-      let msg;
-      try { msg = JSON.parse(data.toString()); } catch { return; }
-      this._handle(msg);
-    });
-    ws.on('close', () => {
-      console.log('[aisstream] closed; retrying in 5s');
-      this._scheduleReconnect();
-    });
+    ws.on('open', () => this._onOpen());
+    ws.on('message', (data) => this._onMessage(data));
+    ws.on('close', (code) => this._onClose(code));
     ws.on('error', (e) => {
       console.log(`[aisstream] error: ${e.message}`);
       try { ws.close(); } catch { /* ignore */ }
     });
   }
 
+  // Socket handlers are methods (not closures) so the reconnect logic can be
+  // unit-tested with a fake socket and mock timers — see test/.
+
+  _onOpen() {
+    console.log('[aisstream] open; subscribing to area BBox');
+    this.reconnectMs = this.baseReconnectMs; // healthy connection — reset backoff
+    this.lastMsgAt = Date.now();             // start the inactivity clock
+    this.ws.send(JSON.stringify({
+      APIKey: this.apiKey,
+      BoundingBoxes: [[this.bbox.sw, this.bbox.ne]],
+      FilterMessageTypes: ['PositionReport', 'ShipStaticData', 'StandardClassBPositionReport'],
+    }));
+  }
+
+  _onMessage(data) {
+    let msg;
+    try { msg = JSON.parse(data.toString()); } catch { return; }
+    // aisstream reports problems (bad key, quota, bad subscription) as a
+    // message with an error field rather than closing — surface it instead
+    // of silently dropping it.
+    if (msg && !msg.MetaData && (msg.error || msg.Error || msg.message)) {
+      console.log(`[aisstream] server: ${String(msg.error || msg.Error || msg.message).slice(0, 200)}`);
+      return;
+    }
+    this._handle(msg);
+  }
+
+  _onClose(code) {
+    console.log(`[aisstream] closed (code ${code})`);
+    this._scheduleReconnect();
+  }
+
+  /**
+   * Arm one reconnect attempt after the current backoff delay plus up to
+   * 1 s of jitter, then double the delay for next time (capped at
+   * maxReconnectMs; reset to base by _onOpen). Returns the delay in ms, or
+   * undefined if a reconnect is already pending.
+   */
   _scheduleReconnect() {
-    if (this.reconnectTimer) return;
-    this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; this._connect(); }, 5000);
+    if (this.reconnectTimer) return undefined;
+    const delay = this.reconnectMs + Math.floor(Math.random() * 1000);
+    console.log(`[aisstream] reconnecting in ${Math.round(delay / 1000)}s`);
+    this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; this._connect(); }, delay);
+    this.reconnectMs = Math.min(this.reconnectMs * 2, this.maxReconnectMs);
+    return delay;
+  }
+
+  // Force a reconnect when the socket goes silent. Terminating the socket
+  // fires 'close', which schedules the reconnect; a successful 'open' then
+  // resets the backoff once data flows again.
+  _startWatchdog() {
+    if (this.watchdogTimer) return;
+    this.watchdogTimer = setInterval(() => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.lastMsgAt) return;
+      const idle = Date.now() - this.lastMsgAt;
+      if (idle > this.idleTimeoutMs) {
+        console.log(`[aisstream] no data for ${Math.round(idle / 1000)}s — forcing reconnect`);
+        this.lastMsgAt = Date.now(); // avoid retriggering before the reconnect lands
+        try { this.ws.terminate(); } catch { /* ignore */ }
+      }
+    }, this.watchdogIntervalMs);
   }
 
   _handle(msg) {
@@ -85,6 +144,7 @@ export class AisStreamSource {
     if (!meta) return;
     const mmsi = meta.MMSI ?? meta.MMSI_String ?? null;
     if (!mmsi) return;
+    this.lastMsgAt = Date.now(); // live data — feed the inactivity watchdog
 
     const type = msg.MessageType;
     let existing = this.vesselState.get(mmsi);
