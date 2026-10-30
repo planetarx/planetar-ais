@@ -9,18 +9,21 @@
 //                              (map view, detector, fusion engine).
 //
 // Source is selected via AIS_SOURCE=mock|aisstream (default: mock).
+// AIS_RECORD_DIR, when set, also appends every position to a daily JSONL file.
 
 import { BrokerPublisher } from './publisher.mjs';
 import { MockAisSource } from './source-mock.mjs';
 import { AisStreamSource } from './source-aisstream.mjs';
 import { formatLatLon, nmBetween } from './victoria.mjs';
 import { getArea } from './areas.mjs';
+import { PositionRecorder } from './recorder.mjs';
 
 const SOURCE = (process.env.AIS_SOURCE ?? 'mock').toLowerCase();
 const BROKER_HOST = process.env.BROKER_HOST ?? '127.0.0.1';
 const BROKER_PUB_PORT = Number(process.env.BROKER_PUB_PORT ?? 12001);
 const CHAT_SUMMARY_MS = Number(process.env.CHAT_SUMMARY_MS ?? 30_000);
 const LOST_AFTER_MS = Number(process.env.LOST_AFTER_MS ?? 5 * 60_000);
+const recorder = process.env.AIS_RECORD_DIR ? new PositionRecorder(process.env.AIS_RECORD_DIR) : null;
 
 // Operating area — OP=victoria (default) | OP=hormuz. Selects the bounding
 // box, the mock fleet, and the planetar-ui server ("Operation") that this
@@ -42,7 +45,7 @@ const source = SOURCE === 'aisstream'
       seedVessels: area.fleet,
     });
 
-console.log(`[planetar-ais] op=${area.name} (${area.label}) server=${SERVER_ID} source=${SOURCE} broker=${BROKER_HOST}:${BROKER_PUB_PORT}`);
+console.log(`[planetar-ais] op=${area.name} (${area.label}) server=${SERVER_ID} source=${SOURCE} broker=${BROKER_HOST}:${BROKER_PUB_PORT}${recorder ? ` record=${recorder.dir}` : ''}`);
 
 // Per-vessel rate-limit state for chat summaries.
 const lastChatNs = new Map();           // mmsi -> ns of last chat post
@@ -83,6 +86,7 @@ function publishFleet(event, vessel) {
 }
 
 function publishPosition(vessel) {
+  recorder?.record({ ...vessel, serverId: SERVER_ID });
   publisher.publish({
     topic: 'vessel.ais.position',
     schemaName: 'vessel.ais.Position.v1',

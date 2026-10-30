@@ -57,6 +57,7 @@ npm run start:aisstream
 | `MOCK_TICK_MS` | `3000` | mock advance interval |
 | `CHAT_SUMMARY_MS` | `30000` | per-vessel chat summary throttle |
 | `LOST_AFTER_MS` | `300000` | mark `lost` after this much silence |
+| `AIS_RECORD_DIR` | — | when set, append every position to `<dir>/ais-YYYY-MM-DD.jsonl` (UTC receive date) — the AIS side of SAR dark-vessel matching |
 
 ## Operating areas
 
