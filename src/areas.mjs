@@ -10,7 +10,7 @@
 //   spread    — optional lat/lon spread for moving vessels (default 0.18)
 //   fleet     — mock seed vessels
 //
-// Pick one with the OP env var (OP=victoria | OP=hormuz) — see index.mjs.
+// Pick one with the OP env var (OP=victoria | OP=hormuz | OP=orca) — see index.mjs.
 
 import { VICTORIA_BBOX, VICTORIA_CENTER } from './victoria.mjs';
 
@@ -82,6 +82,16 @@ export const AREAS = {
     bbox: VICTORIA_BBOX,
     center: VICTORIA_CENTER,
     fleet: VICTORIA_FLEET,
+  },
+  // Whale watching (planetar-ui-orca): Victoria, Race Rocks, Haro Strait and
+  // the San Juan Islands. Live AIS only — no mock fleet.
+  orca: {
+    name: 'orca',
+    serverId: 'orca',
+    label: 'Orca watch',
+    bbox: { sw: [48.10, -123.80], ne: [48.85, -122.75] },
+    center: { lat: 48.40, lon: -123.30 },
+    fleet: [],
   },
   hormuz: {
     name: 'hormuz',
