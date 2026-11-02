@@ -43,15 +43,27 @@ OP=hormuz npm start
 # Real AIS via aisstream.io (also honours OP for the BBox)
 export AISSTREAM_API_KEY=...
 npm run start:aisstream
+
+# Our own receiver: an RTL-SDR AIS dongle + VHF antenna running AIS-catcher,
+# which forwards raw !AIVDM sentences over UDP
+AIS-catcher -u 127.0.0.1 10110          # on the receiver host
+AIS_SOURCE=nmea OP=orca npm start
 ```
+
+A local receiver hears small class B boats that aisstream rarely relays and has no
+aggregator gaps. `source-nmea.mjs` decodes message types 1/2/3, 5, 18, 19 and 24; it
+was checked against sentences encoded by pyais (`test/fixtures/pyais-vectors.json`).
+The UDP socket has no authentication: keep `NMEA_UDP_HOST` on loopback or a trusted LAN.
 
 ## Env vars
 
 | Var | Default | Notes |
 |---|---|---|
 | `OP` | `victoria` | operating area: `victoria` or `hormuz` |
-| `AIS_SOURCE` | `mock` | `mock` or `aisstream` |
+| `AIS_SOURCE` | `mock` | `mock`, `aisstream`, or `nmea` (own receiver) |
 | `AISSTREAM_API_KEY` | — | required for `AIS_SOURCE=aisstream` (free key at aisstream.io) |
+| `NMEA_UDP_HOST` | `127.0.0.1` | `AIS_SOURCE=nmea`: address to listen on (`0.0.0.0` for a receiver on another LAN host) |
+| `NMEA_UDP_PORT` | `10110` | `AIS_SOURCE=nmea`: UDP port for `!AIVDM` sentences |
 | `BROKER_HOST` | `127.0.0.1` | planetar-broker producer host |
 | `BROKER_PUB_PORT` | `12001` | producer port |
 | `MOCK_TICK_MS` | `3000` | mock advance interval |
@@ -100,7 +112,7 @@ fields keep their original semantics for deployed clients.
 | `name`, `callsign`, `destination`, `flag` | string or `null` | `flag` is only set by the mock source |
 | `lastSeenNs`, `firstSeenNs` | decimal string, ns since epoch | receive time at this service (ms precision) |
 | `inBBox`, `serverId` | bool, string | operating-area scoping |
-| `simulated` | bool | `true` from the mock source, `false` from aisstream — render provenance honestly |
+| `simulated` | bool | `true` from the mock source, `false` from aisstream and nmea — render provenance honestly |
 
 Run `npm test` for the decoder and mock-source tests.
 

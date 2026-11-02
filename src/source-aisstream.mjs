@@ -13,11 +13,11 @@ const URL = 'wss://stream.aisstream.io/v0/stream';
 
 // AIS "not available" sentinels (ITU-R M.1371) → null, so a placement client
 // never rotates a hull by 511° or dead-reckons a -128 rate of turn.
-const hdgOrNull = (h) => (typeof h === 'number' && h >= 0 && h < 360 ? h : null);   // 511 = n/a
-const rotOrNull = (r) => (typeof r === 'number' && r !== -128 ? r : null);           // -128 = n/a; ±127 = >10°/min, no sensor
-const navOrNull = (n) => (typeof n === 'number' && n >= 0 && n <= 14 ? n : null);   // 15 = not defined
-const posOrNull = (x) => (typeof x === 'number' && x > 0 ? x : null);                // 0 = n/a (draught, IMO)
-const utcSecOrNull = (t) => (typeof t === 'number' && t >= 0 && t <= 59 ? t : null);  // 60 n/a, 61 manual, 62 DR, 63 inoperative
+export const hdgOrNull = (h) => (typeof h === 'number' && h >= 0 && h < 360 ? h : null);   // 511 = n/a
+export const rotOrNull = (r) => (typeof r === 'number' && r !== -128 ? r : null);           // -128 = n/a; ±127 = >10°/min, no sensor
+export const navOrNull = (n) => (typeof n === 'number' && n >= 0 && n <= 14 ? n : null);   // 15 = not defined
+export const posOrNull = (x) => (typeof x === 'number' && x > 0 ? x : null);                // 0 = n/a (draught, IMO)
+export const utcSecOrNull = (t) => (typeof t === 'number' && t >= 0 && t <= 59 ? t : null);  // 60 n/a, 61 manual, 62 DR, 63 inoperative
 const boolOrNull = (b) => (typeof b === 'boolean' ? b : null);
 
 // Static fields that ride along on every later position snapshot.
@@ -240,7 +240,7 @@ function dimsLength(sd) {
 }
 
 // AIS ship type codes (ITU-R M.1371) → coarse label.
-function shipTypeName(code) {
+export function shipTypeName(code) {
   if (code == null) return null;
   if (code >= 20 && code <= 29) return 'wing-in-ground';
   if (code === 30) return 'fishing';

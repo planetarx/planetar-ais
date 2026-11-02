@@ -1,0 +1,123 @@
+[
+ {
+  "fields": {
+   "msg_type": 1,
+   "mmsi": 369264000,
+   "status": 0,
+   "turn": 0.0,
+   "speed": 22.3,
+   "accuracy": true,
+   "lon": -122.7691,
+   "lat": 48.5243,
+   "course": 271.5,
+   "heading": 270,
+   "second": 42
+  },
+  "sentences": [
+   "!AIVDO,1,1,,A,15P:5P003Oo>0OHKi0m:VpMEP000,0*3E"
+  ]
+ },
+ {
+  "fields": {
+   "msg_type": 18,
+   "mmsi": 338191000,
+   "speed": 18.6,
+   "accuracy": false,
+   "lon": -123.03,
+   "lat": 48.71,
+   "course": 95.0,
+   "heading": 511,
+   "second": 7
+  },
+  "sentences": [
+   "!AIVDO,1,1,,A,B52QRV00fUk=0p6uu10sKwSP0000,0*6A"
+  ]
+ },
+ {
+  "fields": {
+   "msg_type": 3,
+   "mmsi": 316039686,
+   "status": 5,
+   "turn": -128.0,
+   "speed": 102.3,
+   "accuracy": false,
+   "lon": 181.0,
+   "lat": 91.0,
+   "course": 360.0,
+   "heading": 511,
+   "second": 60
+  },
+  "sentences": [
+   "!AIVDO,1,1,,A,34eIR1UP?w<tSF0l4Q@>4?wqP000,0*56"
+  ]
+ },
+ {
+  "fields": {
+   "msg_type": 5,
+   "mmsi": 316039686,
+   "imo": 9876543,
+   "callsign": "CFA1234",
+   "shipname": "SALISH SEA ECLIPSE",
+   "ship_type": 60,
+   "to_bow": 5,
+   "to_stern": 18,
+   "to_port": 3,
+   "to_starboard": 4,
+   "draught": 2.1,
+   "destination": "VICTORIA"
+  },
+  "sentences": [
+   "!AIVDO,2,1,3,A,54eIR1P2Fe3t<H77;?A<4hU<R1<D60D<hU1<D00t0`B3400005ER@m3lR@@0,0*26",
+   "!AIVDO,2,2,3,A,00000000000,2*25"
+  ]
+ },
+ {
+  "fields": {
+   "msg_type": 24,
+   "mmsi": 338191000,
+   "partno": 0,
+   "shipname": "SEA LION"
+  },
+  "sentences": [
+   "!AIVDO,1,1,,A,H52QRV1<D60hTtp0000000000000,0*79"
+  ]
+ },
+ {
+  "fields": {
+   "msg_type": 24,
+   "mmsi": 338191000,
+   "partno": 1,
+   "ship_type": 37,
+   "callsign": "WDA1234",
+   "to_bow": 4,
+   "to_stern": 6,
+   "to_port": 1,
+   "to_starboard": 2
+  },
+  "sentences": [
+   "!AIVDO,1,1,,A,H52QRV4U0000000G41ijkl0P6120,0*4C"
+  ]
+ },
+ {
+  "fields": {
+   "msg_type": 19,
+   "mmsi": 368616000,
+   "speed": 29.3,
+   "accuracy": true,
+   "lon": -123.1,
+   "lat": 48.5,
+   "course": 10.0,
+   "heading": 12,
+   "second": 30,
+   "shipname": "FAST ONE",
+   "ship_type": 37,
+   "to_bow": 3,
+   "to_stern": 5,
+   "to_port": 1,
+   "to_starboard": 1
+  },
+  "sentences": [
+   "!AIVDO,1,1,,A,C5ORR@019Mk7ph6t1v06@6?0<2Va0NL:000000000000BP<2PPP0,0*5B"
+  ]
+ }
+]

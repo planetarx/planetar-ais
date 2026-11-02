@@ -8,12 +8,15 @@
 //   vessel.ais.position      — raw position stream for any downstream consumer
 //                              (map view, detector, fusion engine).
 //
-// Source is selected via AIS_SOURCE=mock|aisstream (default: mock).
+// Source is selected via AIS_SOURCE=mock|aisstream|nmea (default: mock). nmea
+// listens for !AIVDM sentences from our own receiver (e.g. AIS-catcher
+// `-u 127.0.0.1 10110`) on NMEA_UDP_HOST:NMEA_UDP_PORT (default 127.0.0.1:10110).
 // AIS_RECORD_DIR, when set, also appends every position to a daily JSONL file.
 
 import { BrokerPublisher } from './publisher.mjs';
 import { MockAisSource } from './source-mock.mjs';
 import { AisStreamSource } from './source-aisstream.mjs';
+import { NmeaUdpSource } from './source-nmea.mjs';
 import { formatLatLon, nmBetween } from './victoria.mjs';
 import { getArea } from './areas.mjs';
 import { PositionRecorder } from './recorder.mjs';
@@ -36,6 +39,9 @@ publisher.start();
 
 const source = SOURCE === 'aisstream'
   ? new AisStreamSource({ apiKey: process.env.AISSTREAM_API_KEY, bbox: area.bbox })
+  : SOURCE === 'nmea'
+  ? new NmeaUdpSource({ host: process.env.NMEA_UDP_HOST ?? '127.0.0.1',
+      port: Number(process.env.NMEA_UDP_PORT ?? 10110), bbox: area.bbox })
   : new MockAisSource({
       tickMs: Number(process.env.MOCK_TICK_MS ?? 3000),
       bbox: area.bbox,
@@ -131,6 +137,7 @@ source.onUpdate = ({ event, kind, vessel, prevSog }) => {
     known.add(vessel.mmsi);
     publishFleet('appeared', vessel);
     announceAppeared(vessel);
+    if (kind === 'position') publishPosition(vessel); // a vessel's first fix is a position too
     return;
   }
 
