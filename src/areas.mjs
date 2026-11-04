@@ -10,7 +10,9 @@
 //   spread    — optional lat/lon spread for moving vessels (default 0.18)
 //   fleet     — mock seed vessels
 //
-// Pick one with the OP env var (OP=victoria | OP=hormuz | OP=orca) — see index.mjs.
+// Pick them with the OP env var: one (OP=victoria | OP=hormuz | OP=orca) or a
+// comma list (OP=victoria,orca) served from ONE source connection — see
+// index.mjs and router.mjs.
 
 import { VICTORIA_BBOX, VICTORIA_CENTER } from './victoria.mjs';
 
@@ -117,4 +119,11 @@ export function getArea(name) {
     );
   }
   return area;
+}
+
+// Resolve a comma list of OP names (OP=victoria,orca) to areas, in order.
+// The order matters: a position's serverId is the first listed area holding it.
+export function getAreas(names) {
+  const list = String(names ?? 'victoria').split(',').map((n) => n.trim()).filter(Boolean);
+  return list.map((n) => getArea(n));
 }

@@ -44,6 +44,12 @@ OP=hormuz npm start
 export AISSTREAM_API_KEY=...
 npm run start:aisstream
 
+# Several areas from ONE aisstream connection (how bb and www0 run it):
+# each position is published once on vessel.ais.position with serverId = the
+# first listed area holding it and areas = all of them; chat channels and
+# fleet events stay per area. See src/router.mjs.
+OP=victoria,orca npm run start:aisstream
+
 # Our own receiver: an RTL-SDR AIS dongle + VHF antenna running AIS-catcher,
 # which forwards raw !AIVDM sentences over UDP
 AIS-catcher -u 127.0.0.1 10110          # on the receiver host

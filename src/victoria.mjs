@@ -33,3 +33,8 @@ export function formatLatLon(lat, lon) {
   const ew = lon >= 0 ? 'E' : 'W';
   return `${Math.abs(lat).toFixed(4)}${ns} ${Math.abs(lon).toFixed(4)}${ew}`;
 }
+
+// Inside any of several boxes (one source serving several operating areas).
+export function insideAnyBBox(lat, lon, bboxes) {
+  return bboxes.some((b) => insideBBox(lat, lon, b));
+}

@@ -9,7 +9,7 @@
 // aggregator gaps, both of which aisstream lacks around Victoria.
 
 import dgram from 'node:dgram';
-import { VICTORIA_BBOX, insideBBox } from './victoria.mjs';
+import { VICTORIA_BBOX, insideAnyBBox } from './victoria.mjs';
 import { hdgOrNull, rotOrNull, navOrNull, posOrNull, utcSecOrNull, shipTypeName } from './source-aisstream.mjs';
 
 const SIXBIT_TEXT = '@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_ !"#$%&\'()*+,-./0123456789:;<=>?';
@@ -124,10 +124,10 @@ const dimFields = (m) => (m.dimA + m.dimB + m.dimC + m.dimD === 0 ? null : {
 const lengthOf = (m) => (m.dimA + m.dimB > 0 ? m.dimA + m.dimB : null);
 
 export class NmeaUdpSource {
-  constructor({ port = 10110, host = '0.0.0.0', bbox = VICTORIA_BBOX } = {}) {
+  constructor({ port = 10110, host = '0.0.0.0', bbox = VICTORIA_BBOX, bboxes = [bbox] } = {}) {
     this.port = port;
     this.host = host;
-    this.bbox = bbox;
+    this.bboxes = bboxes;
     this.vesselState = new Map(); // mmsi -> last vessel snapshot
     this.assembler = new NmeaAssembler();
     this.onUpdate = () => {};
@@ -189,7 +189,7 @@ export class NmeaUdpSource {
     }
 
     if (Math.abs(m.lat) > 90 || Math.abs(m.lon) > 180) return; // 91 / 181 = not available
-    if (!insideBBox(m.lat, m.lon, this.bbox)) return;
+    if (!insideAnyBBox(m.lat, m.lon, this.bboxes)) return;
     const classB = m.type === 18 || m.type === 19;
     const trueHeading = hdgOrNull(m.heading);
     const snap = {

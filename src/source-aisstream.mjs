@@ -7,7 +7,7 @@
 // the difference.
 
 import WebSocket from 'ws';
-import { VICTORIA_BBOX, insideBBox } from './victoria.mjs';
+import { VICTORIA_BBOX, insideAnyBBox } from './victoria.mjs';
 
 const URL = 'wss://stream.aisstream.io/v0/stream';
 
@@ -29,10 +29,10 @@ function carryStatic(existing) {
 }
 
 export class AisStreamSource {
-  constructor({ apiKey, bbox = VICTORIA_BBOX } = {}) {
+  constructor({ apiKey, bbox = VICTORIA_BBOX, bboxes = [bbox] } = {}) {
     if (!apiKey) throw new Error('AISSTREAM_API_KEY is required for source=aisstream');
     this.apiKey = apiKey;
-    this.bbox = bbox;
+    this.bboxes = bboxes; // one connection subscribes to every box
     this.ws = null;
     this.vesselState = new Map(); // mmsi -> last vessel snapshot we built
     this.onUpdate = () => {};
@@ -85,7 +85,7 @@ export class AisStreamSource {
     this.lastMsgAt = Date.now();             // start the inactivity clock
     this.ws.send(JSON.stringify({
       APIKey: this.apiKey,
-      BoundingBoxes: [[this.bbox.sw, this.bbox.ne]],
+      BoundingBoxes: this.bboxes.map((b) => [b.sw, b.ne]),
       FilterMessageTypes: ['PositionReport', 'ShipStaticData', 'StandardClassBPositionReport'],
     }));
   }
@@ -156,7 +156,7 @@ export class AisStreamSource {
       const lat = pr.Latitude;
       const lon = pr.Longitude;
       if (typeof lat !== 'number' || typeof lon !== 'number') return;
-      if (!insideBBox(lat, lon, this.bbox)) return; // belt + suspenders; aisstream filtered already
+      if (!insideAnyBBox(lat, lon, this.bboxes)) return; // belt + suspenders; aisstream filtered already
 
       const classB = type === 'StandardClassBPositionReport';
       const trueHeading = hdgOrNull(pr.TrueHeading);
