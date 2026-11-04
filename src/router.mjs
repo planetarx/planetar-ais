@@ -89,7 +89,11 @@ export function createRouter({ areas, publish, recorder = null, now = Date.now,
     if (positional) position(vessel, inAreas);
     const seenNs = BigInt(vessel.lastSeenNs ?? BigInt(now()) * 1_000_000n);
 
-    for (const area of inAreas) {
+    // Per-area events go out in REVERSE listed order, so the first-listed
+    // area's comes last: planetar-ontology keeps only a vessel's latest fleet
+    // payload, and the planetar-ui map seeds from it and filters by serverId —
+    // the stored serverId must match the one on the vessel's positions.
+    for (const area of [...inAreas].reverse()) {
       const states = perArea.get(area.serverId);
       let st = states.get(vessel.mmsi);
       if (!st || event === 'appeared') {

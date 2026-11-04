@@ -68,8 +68,8 @@ test('chat and fleet events are per area, as with one process per area', () => {
   const h = harness();
   h.router.onUpdate({ event: 'appeared', kind: 'position', vessel: h.vessel(3, VICTORIA) });
   const appeared = h.topics('vessel.ais.fleet').filter((m) => m.payload.event === 'appeared');
-  assert.deepEqual(appeared.map((m) => m.payload.serverId), ['pac', 'orca']);
-  assert.deepEqual(appeared.map((m) => m.payload.channelId), ['pac-v-3', 'orca-v-3']);
+  assert.deepEqual(appeared.map((m) => m.payload.serverId).sort(), ['orca', 'pac']);
+  assert.deepEqual(appeared.map((m) => m.payload.channelId).sort(), ['orca-v-3', 'pac-v-3']);
   assert.ok(h.topics('chat.pac.vessel-3').length > 0);
   assert.ok(h.topics('chat.orca.vessel-3').length > 0);
 });
@@ -110,4 +110,19 @@ test('a static report before any position lands in the first area', () => {
   assert.equal(h.topics('vessel.ais.position').length, 0);
   const appeared = h.topics('vessel.ais.fleet').filter((m) => m.payload.event === 'appeared');
   assert.deepEqual(appeared.map((m) => m.payload.serverId), ['pac']);
+});
+
+test('the first-listed area\'s fleet event goes last, so a store keeping the latest gets the position\'s serverId', () => {
+  // planetar-ontology keeps one record per vessel: the last vessel.ais.fleet
+  // payload. The vic map seeds from it and filters by serverId.
+  const h = harness();
+  h.router.onUpdate({ event: 'appeared', kind: 'position', vessel: h.vessel(8, VICTORIA) });
+  h.advance(1);
+  h.router.onUpdate({ event: 'update', kind: 'position', vessel: h.vessel(8, VICTORIA, 1) });
+  h.router.onUpdate({ event: 'static-update', vessel: h.vessel(8, VICTORIA, 1) });
+  const fleet = h.topics('vessel.ais.fleet');
+  for (const ev of ['appeared', 'update', 'static-update']) {
+    const of = fleet.filter((m) => m.payload.event === ev);
+    assert.equal(of.at(-1).payload.serverId, 'pac', ev);
+  }
 });
